@@ -262,7 +262,7 @@ class MenuScreen extends StatelessWidget {
                 icon: const Icon(
                   Icons.help_outline,
                   color: Color.fromARGB(
-                      255, 0, 118, 253), // Menambahkan warna pada ikon
+                      255, 0, 118, 253), // Menambahkan warna pada ikont
                 ),
                 label: const Text(
                   'Cara Bermain',
