@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
-import 'menu_screen.dart'; // Import MenuScreen
+import 'screens/menu_screen.dart'; // Import MenuScreen
 import 'package:audioplayers/audioplayers.dart'; // Import audioplayers
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -57,7 +59,13 @@ class _GameScreenState extends State<GameScreen> {
   double groundY = 0;
   final double gravity = 1.5;
   Timer? gameTimer;
-  List<double> obstacleX = [800, 1000, 1200, 1400, 1600]; // Mulai dengan 5 rintangan
+  List<double> obstacleX = [
+    800,
+    1000,
+    1200,
+    1400,
+    1600
+  ]; // Mulai dengan 5 rintangan
   List<double> obstacleY = [0, -30, -20, -40, -10]; // Variasi ketinggian awal
   double obstacleSpeed = 5; // Kecepatan awal
   double baseSpeed = 5; // Kecepatan dasar
@@ -117,7 +125,7 @@ class _GameScreenState extends State<GameScreen> {
       showCountdown = true;
       countdown = 3;
     });
-    
+
     countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (countdown > 0) {
         setState(() {
@@ -128,7 +136,9 @@ class _GameScreenState extends State<GameScreen> {
         setState(() {
           showCountdown = false;
         });
-        startGame(continueGame: false); // Mulai permainan setelah hitungan mundur selesai
+        startGame(
+            continueGame:
+                false); // Mulai permainan setelah hitungan mundur selesai
       }
     });
   }
@@ -137,9 +147,10 @@ class _GameScreenState extends State<GameScreen> {
     try {
       // Pastikan sound effect lain berhenti
       await soundEffectPlayer.stop();
-      
+
       await backgroundMusicPlayer.setReleaseMode(ReleaseMode.loop);
-      await backgroundMusicPlayer.setSource(AssetSource('audio/soundtrack.mp3'));
+      await backgroundMusicPlayer
+          .setSource(AssetSource('audio/soundtrack.mp3'));
       await backgroundMusicPlayer.setVolume(0.5);
       await backgroundMusicPlayer.resume();
     } catch (e) {
@@ -156,7 +167,8 @@ class _GameScreenState extends State<GameScreen> {
         }
         dinoY = 0;
         obstacleX = [800, 1000, 1200, 1400, 1600];
-        obstacleY = List.generate(5, (index) => -70 + Random().nextDouble() * 70);
+        obstacleY =
+            List.generate(5, (index) => -70 + Random().nextDouble() * 70);
       });
 
       await playBackgroundMusic(); // Tunggu audio siap
@@ -175,7 +187,7 @@ class _GameScreenState extends State<GameScreen> {
       // Hentikan musik latar dan sound effect lain
       await backgroundMusicPlayer.stop();
       await soundEffectPlayer.stop();
-      
+
       await soundEffectPlayer.setSource(AssetSource('audio/game_over.wav'));
       await soundEffectPlayer.resume();
     } catch (e) {
@@ -188,7 +200,7 @@ class _GameScreenState extends State<GameScreen> {
       // Hentikan semua suara yang sedang bermain
       await backgroundMusicPlayer.stop();
       await soundEffectPlayer.stop();
-      
+
       await soundEffectPlayer.setSource(AssetSource('audio/countdown.mp3'));
       await soundEffectPlayer.resume();
     } catch (e) {
@@ -213,7 +225,9 @@ class _GameScreenState extends State<GameScreen> {
 
       // Tambah rintangan baru dengan jarak lebih dekat
       if (obstacleX.last < 600) {
-        obstacleX.add(obstacleX.last + 200 + Random().nextDouble() * 100); // Jarak random 200-300
+        obstacleX.add(obstacleX.last +
+            200 +
+            Random().nextDouble() * 100); // Jarak random 200-300
         obstacleY.add(-70 + Random().nextDouble() * 70);
       }
 
@@ -259,7 +273,7 @@ class _GameScreenState extends State<GameScreen> {
   void moveUp() {
     setState(() {
       if (dinoY > -200) {
-        dinoY -= 20;
+        dinoY -= 50;
       }
     });
   }
@@ -267,12 +281,16 @@ class _GameScreenState extends State<GameScreen> {
   void moveDown() {
     setState(() {
       if (dinoY < 0) {
-        dinoY += 20;
+        dinoY += 50;
       }
     });
   }
 
   void gameOver() {
+    int _hintCount = 0; // Counter hint yang digunakan
+    const int _maxHints = 2; // Batas maksimal hint
+    String _hintMessage = ''; // Hint yang diberikan AI
+
     gameTimer?.cancel();
     setState(() {
       isPlaying = false;
@@ -303,12 +321,53 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
+    int _aiUsageCount = 0; // Variabel untuk menghitung penggunaan AI
+    const int _maxAIUsage = 2; // Batas maksimal penggunaan AI
+
+    Future<String> _fetchAIAnswer(String question) async {
+      const String apiKey =
+          "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";
+      const String apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+
+      try {
+        final response = await http.post(
+          Uri.parse(apiUrl),
+          headers: {
+            "Authorization": "Bearer $apiKey",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode({
+            "model": "llama3-8b-8192",
+            "messages": [
+              {
+                "role": "system",
+                "content":
+                    "Jawab soal matematika yang diberikan pengguna dengan singkat dan langsung memberikan jawaban yang benar."
+              },
+              {"role": "user", "content": "Soal: $question"},
+            ],
+            "temperature": 0.3,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return data['choices'][0]['message']['content'].trim();
+        } else {
+          return "Gagal mendapatkan jawaban. Coba lagi nanti.";
+        }
+      } catch (e) {
+        return "Terjadi kesalahan: $e";
+      }
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           _dialogSetState = setState;
+
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
@@ -338,17 +397,23 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text('Waktu: $_timeLeft detik',
-                    style: TextStyle(
-                      color: _timeLeft <= 3 ? Colors.red : Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    )),
+                Text(
+                  'Waktu: $_timeLeft detik',
+                  style: TextStyle(
+                    color: _timeLeft <= 3 ? Colors.red : Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 const Text('Jawab soal ini untuk melanjutkan:'),
-                Text(problem['question'],
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  problem['question'],
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 TextField(
                   controller: _answerController,
                   keyboardType: TextInputType.number,
@@ -357,6 +422,15 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                   autofocus: true,
                 ),
+                const SizedBox(height: 10),
+                if (_hintMessage.isNotEmpty) // Tampilkan hint jika ada
+                  Text(
+                    'Jawaban AI: $_hintMessage',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
               ],
             ),
             actions: [
@@ -386,12 +460,30 @@ class _GameScreenState extends State<GameScreen> {
                 },
                 child: const Text('Menyerah'),
               ),
+              if (_aiUsageCount < _maxAIUsage) // Cek batas penggunaan AI
+                TextButton(
+                  onPressed: () async {
+                    if (_aiUsageCount < _maxAIUsage) {
+                      _aiUsageCount++;
+                      _hintMessage = await _fetchAIAnswer(problem['question']);
+                      setState(() {});
+                    }
+                  },
+                  child:
+                      Text('Jawaban AI (${_maxAIUsage - _aiUsageCount} sisa)'),
+                ),
+              if (_aiUsageCount >= _maxAIUsage)
+                const Text(
+                  'AI hanya bisa digunakan 2 kali per game.',
+                  style: TextStyle(color: Colors.red, fontSize: 12),
+                ),
             ],
           );
         },
       ),
     ).then((_) {
       _questionTimer?.cancel();
+      _hintMessage = ''; // Reset hint saat dialog ditutup
     });
   }
 
@@ -465,7 +557,8 @@ class _GameScreenState extends State<GameScreen> {
                 const SizedBox(height: 50),
                 // Score display
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(20),
@@ -597,8 +690,8 @@ class _GameScreenState extends State<GameScreen> {
                           ),
                           child: IconButton(
                             onPressed: moveUp,
-                            icon:
-                                const Icon(Icons.arrow_upward, color: Colors.white),
+                            icon: const Icon(Icons.arrow_upward,
+                                color: Colors.white),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -664,10 +757,34 @@ class _GameScreenState extends State<GameScreen> {
                           style: TextStyle(fontSize: 20),
                         ),
                       ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Navigasi kembali ke MenuScreen
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    MenuScreen(onStartGame: () {})),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4CAF50),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 30,
+                            vertical: 15,
+                          ),
+                        ),
+                        child: const Text(
+                          'Kembali ke Menu',
+                          style: TextStyle(fontSize: 20, color: Colors.white),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
+
             if (showCountdown)
               Container(
                 color: Colors.black54,
