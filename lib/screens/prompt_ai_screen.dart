@@ -269,21 +269,22 @@ class _PromptAIScreenState extends State<PromptAIScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(15),
         ),
-        title: const Text('About AI Prompt Assistant'),
+        title: const Text('Tentang AI Prompt Assistant'),
         content: const SingleChildScrollView(
           child: ListBody(
             children: <Widget>[
-              Text('This app allows you to interact with an AI assistant.'),
+              Text(
+                  'Aplikasi ini memungkinkan Anda berinteraksi dengan asisten AI.'),
               SizedBox(height: 10),
-              Text('Simply enter a prompt and get an intelligent response.'),
+              Text('Cukup masukkan perintah dan dapatkan respons yang cerdas.'),
               SizedBox(height: 10),
-              Text('Powered by Groq AI with Llama 3.3 model.'),
+              Text('Didukung oleh Groq AI dengan model Llama 3.3.'),
             ],
           ),
         ),
         actions: <Widget>[
           TextButton(
-            child: const Text('Close'),
+            child: const Text('Tutup'),
             onPressed: () {
               Navigator.of(context).pop();
             },

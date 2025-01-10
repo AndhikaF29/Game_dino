@@ -754,7 +754,10 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                         child: const Text(
                           'Resume',
-                          style: TextStyle(fontSize: 20),
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: Color.fromARGB(255, 255, 255, 255),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
